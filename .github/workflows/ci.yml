@@ -2,12 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [master]
-    tags: [v*]
+    branches:
+      - master
+    tags:
+      - v*
   pull_request:
-    branches: [master]
+    branches:
+      - master
 
 jobs:
+  # Build Python wheels for Linux x86_64 and Windows x86_64 only
   build-python-wheels:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -19,6 +23,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - uses: docker/setup-qemu-action@v2
+        if: ${{ matrix.os == 'ubuntu-22.04' && matrix.arch == 'aarch64' }}
+        name: Set up QEMU
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.1
@@ -33,29 +41,90 @@ jobs:
           CIBW_BEFORE_BUILD: pip install -r python/install_requirements.txt
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_ARCHS: ${{ matrix.arch }}
-          CIBW_SKIP: pp* *-musllinux_*  # keep minimal skip
+          # Skip everything except Linux x86_64 and Windows x86_64
+          CIBW_SKIP: aarch64 *-musllinux_* pp* macos-*
 
-      - name: Upload wheels
+      - name: Upload Python wheels
         uses: actions/upload-artifact@v4
         with:
           name: python-wheels-${{ runner.os }}-${{ matrix.arch }}
           path: python/wheelhouse
 
-
-  publish-python-wheels-on-pypi:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+  # Test the wheels to ensure they work correctly
+  test-python-wheels:
     needs: [build-python-wheels]
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, windows-2022]
 
     steps:
-      - name: Download wheels
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10.11"
+
+      - uses: actions/checkout@v4
+
+      - name: Prepare test environment
+        shell: bash
+        run: ./python/tools/prepare_test_environment.sh
+
+      - name: Download Python wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: python-wheels-${{ runner.os }}-*
+          merge-multiple: true
+          path: .
+
+      - name: Install wheel
+        if: startsWith(matrix.os, 'ubuntu')
+        run: pip install *cp310*manylinux*x86_64.whl
+
+      - name: Install wheel
+        if: startsWith(matrix.os, 'windows')
+        shell: bash
+        run: pip install *cp310*win*.whl
+
+      - name: Run tests
+        shell: bash
+        run: pytest -v python/tests/ --ignore=python/tests/test_opennmt_tf.py
+
+  # Optional: check Python style (kept for safety)
+  check-python-style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.10.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10.11"
+      - name: Install dependencies
+        run: python -m pip install black==22.* flake8==3.8.* isort==5.*
+      - name: Check code format with Black
+        working-directory: python
+        run: black --check .
+      - name: Check imports order with isort
+        working-directory: python
+        run: isort --check-only .
+      - name: Check code style with Flake8
+        working-directory: python
+        if: ${{ always() }}
+        run: flake8 .
+
+  # Publish only Linux + Windows x86 wheels
+  publish-python-wheels-on-pypi:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    needs: [build-python-wheels, test-python-wheels, check-python-style]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download Python wheels
         uses: actions/download-artifact@v4
         with:
           pattern: python-wheels-*
           merge-multiple: true
           path: .
-
-      - name: Publish to PyPI
+      - name: Publish Python wheels to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
