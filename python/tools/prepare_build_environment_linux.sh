@@ -20,12 +20,13 @@ if [ "$CIBW_ARCHS" == "aarch64" ]; then
 
 else
     # Install CUDA 12.8:
-    yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+    dnf install -y dnf-plugins-core
+    dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
     # error mirrorlist.centos.org doesn't exists anymore.
     sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
     sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
     sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
-    yum install --setopt=obsoletes=0 -y \
+    dnf install --setopt=obsoletes=0 -y \
         cuda-nvcc-12-8-12.8.93-1 \
         cuda-cudart-devel-12-8-12.8.90-1 \
         libcurand-devel-12-8-10.3.9.90-1 \
@@ -36,9 +37,9 @@ else
     ln -s cuda-12.8 /usr/local/cuda
 
     ONEAPI_VERSION=2025.3.0
-    yum-config-manager --add-repo https://yum.repos.intel.com/oneapi
+    dnf config-manager --add-repo https://yum.repos.intel.com/oneapi
     rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
-    yum install -y intel-oneapi-mkl-devel-$ONEAPI_VERSION
+    dnf install -y intel-oneapi-mkl-devel-$ONEAPI_VERSION
 
     ONEDNN_VERSION=3.1.1
     curl -L -O https://github.com/oneapi-src/oneDNN/archive/refs/tags/v${ONEDNN_VERSION}.tar.gz
