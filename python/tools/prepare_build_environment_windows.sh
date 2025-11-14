@@ -9,8 +9,8 @@ curl --netrc-optional -L -nv -o cuda.exe https://developer.download.nvidia.com/c
 
 rm cuda.exe
 
-CUDNN_ROOT="C:/Program Files/NVIDIA/CUDNN/v9.1"
-curl --netrc-optional -L -nv -o cudnn.exe https://developer.download.nvidia.com/compute/cudnn/9.1.0/local_installers/cudnn_9.1.0_windows.exe
+CUDNN_ROOT="C:/Program Files/NVIDIA/CUDNN/v9.10"
+curl --netrc-optional -L -nv -o cudnn.exe https://developer.download.nvidia.com/compute/cudnn/9.10.2/local_installers/cudnn_9.10.2_windows.exe
 ./cudnn.exe -s
 sleep 10
 # Remove 11.8 folders
