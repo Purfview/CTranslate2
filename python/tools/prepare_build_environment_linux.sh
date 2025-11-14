@@ -20,7 +20,7 @@ if [ "$CIBW_ARCHS" == "aarch64" ]; then
 
 else
     dnf install -y dnf-plugins-core
-    dnf install -y glibc-headers kernel-headers
+    dnf install -y glibc-devel glibc-headers kernel-headers
     # Install CUDA 12.8:
     dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
     # error mirrorlist.centos.org doesn't exists anymore.
