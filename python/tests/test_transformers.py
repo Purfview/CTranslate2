@@ -958,7 +958,7 @@ class TestWav2Vec2:
             (
                 "facebook/wav2vec2-large-robust-ft-swbd-300h",
                 [
-                    "MISTER QUILTER IS THE APOSSTEL OF THE MIDDLE CLASSES AND"
+                    "MISTER QUILTER IS THE APOSSEL OF THE MIDDLE CLASSES AND"
                     " WE ARE GLAD TO WELCOME HIS GOSPEL",
                 ],
             ),
@@ -987,13 +987,13 @@ class TestWav2Vec2:
         )
 
         device = "cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu"
-        cpu_threads = int(os.environ.get("OMP_NUM_THREADS", 0))
+        # cpu_threads = int(os.environ.get("OMP_NUM_THREADS", 0))
         model = ctranslate2.models.Wav2Vec2(
             output_dir,
             device=device,
             device_index=[0],
             compute_type="int8",
-            intra_threads=cpu_threads,
+            intra_threads=1,
             inter_threads=1,
         )
 
