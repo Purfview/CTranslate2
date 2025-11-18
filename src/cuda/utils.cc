@@ -182,6 +182,11 @@ namespace ctranslate2 {
 
     bool gpu_supports_int8(int device) {
       const cudaDeviceProp& device_prop = get_device_properties(device);
+      // Disable INT8 for RTX 50xx and next arch as it currently doesn't work there:
+      // https://github.com/OpenNMT/CTranslate2/issues/1865
+      if (device_prop.major >= 12)
+        return false;
+
       return device_prop.major > 6 || (device_prop.major == 6 && device_prop.minor == 1);
     }
 
