@@ -39,7 +39,7 @@ jobs:
       - name: Upload Python wheels
         uses: actions/upload-artifact@v4
         with:
-          name: python-wheels-${{ runner.os }}-${{ matrix.arch }}
+          name: python-wheels
           path: python/wheelhouse
 
   test-python-wheels:
@@ -61,13 +61,16 @@ jobs:
       - name: Download Python wheels
         uses: actions/download-artifact@v4
         with:
-          pattern: python-wheels-windows-*
+          pattern: python-wheels
           merge-multiple: true
           path: .
 
       - name: Install wheel (Windows)
         shell: bash
-        run: pip install *cp310*win*.whl
+        run: |
+          echo "Installing wheels in python/wheelhouse/"
+          ls python/wheelhouse
+          pip install python/wheelhouse/*cp310*win*.whl
 
       - name: Run tests
         shell: bash
@@ -107,7 +110,7 @@ jobs:
       - name: Download Python wheels
         uses: actions/download-artifact@v4
         with:
-          pattern: python-wheels-*
+          pattern: python-wheels
           merge-multiple: true
           path: .
 
