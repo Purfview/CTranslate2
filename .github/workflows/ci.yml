@@ -30,17 +30,30 @@ jobs:
           output-dir: python/wheelhouse
         env:
           CIBW_BUILD: cp310-*
+          # skip non-windows platforms
           CIBW_SKIP: macos-* linux* aarch64 pp* *musllinux*
           CIBW_ENVIRONMENT_WINDOWS: CTRANSLATE2_ROOT='${{ github.workspace }}\install'
           CIBW_BEFORE_ALL_WINDOWS: bash python/tools/prepare_build_environment_windows.sh
           CIBW_BEFORE_BUILD: pip install -r python/install_requirements.txt
           CIBW_ARCHS: ${{ matrix.arch }}
 
-      - name: Upload Python wheels
+      - name: Show built wheels (debug)
+        shell: bash
+        run: |
+          echo "=== workspace ==="
+          pwd
+          echo "=== listing python/wheelhouse ==="
+          ls -la python || true
+          ls -la python/wheelhouse || true
+          echo "=== recursive ==="
+          ls -R .
+
+      - name: Upload Python wheels (only the .whl files)
         uses: actions/upload-artifact@v4
         with:
           name: python-wheels
-          path: python/wheelhouse
+          # upload wheel files explicitly (works cross-platform)
+          path: python/wheelhouse/*.whl
 
   test-python-wheels:
     needs: [build-python-wheels]
@@ -58,18 +71,35 @@ jobs:
         shell: bash
         run: ./python/tools/prepare_test_environment.sh
 
-      - name: Download Python wheels
+      - name: Download Python wheels artifact into python/wheelhouse
         uses: actions/download-artifact@v4
         with:
           pattern: python-wheels
           merge-multiple: true
-          path: .
+          path: python/wheelhouse
+
+      - name: Show downloaded wheels (debug)
+        shell: bash
+        run: |
+          echo "Contents of python/wheelhouse after download:"
+          pwd
+          ls -la python || true
+          ls -la python/wheelhouse || true
+          echo "All files:"
+          ls -R .
 
       - name: Install wheel (Windows)
         shell: bash
         run: |
+          # fail early if no wheels found
           echo "Installing wheels in python/wheelhouse/"
-          ls python/wheelhouse
+          WHEELS=(python/wheelhouse/*cp310*win*.whl)
+          if [ ! -e "${WHEELS[0]}" ]; then
+            echo "ERROR: no windows cp310 wheels found under python/wheelhouse/"
+            echo "Listing directory:"
+            ls -la python/wheelhouse || true
+            exit 1
+          fi
           pip install python/wheelhouse/*cp310*win*.whl
 
       - name: Run tests
@@ -112,11 +142,11 @@ jobs:
         with:
           pattern: python-wheels
           merge-multiple: true
-          path: .
+          path: python/wheelhouse
 
       - name: Publish Python wheels to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
-          packages-dir: .
+          packages-dir: python/wheelhouse
