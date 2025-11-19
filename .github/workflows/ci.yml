@@ -12,10 +12,11 @@ on:
 
 jobs:
   build-python-wheels:
-    name: Build cp310 wheels (Windows only)
-    runs-on: windows-2022
+    name: Build cp310 wheels (Linux + Windows)
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-22.04, windows-2022]
         arch: [auto64]
 
     steps:
@@ -29,35 +30,34 @@ jobs:
           package-dir: python
           output-dir: python/wheelhouse
         env:
+          # build only Python 3.10 wheels
           CIBW_BUILD: cp310-*
-          # skip non-windows platforms
-          CIBW_SKIP: macos-* linux* aarch64 pp* *musllinux*
+
+          # skip unwanted platforms
+          CIBW_SKIP: aarch64 *-musllinux_* pp* macos-*
+
+          # environment setup
+          CIBW_ENVIRONMENT_PASS_LINUX: CIBW_ARCHS
           CIBW_ENVIRONMENT_WINDOWS: CTRANSLATE2_ROOT='${{ github.workspace }}\install'
+          CIBW_BEFORE_ALL_LINUX: python/tools/prepare_build_environment_linux.sh
           CIBW_BEFORE_ALL_WINDOWS: bash python/tools/prepare_build_environment_windows.sh
           CIBW_BEFORE_BUILD: pip install -r python/install_requirements.txt
+
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_ARCHS: ${{ matrix.arch }}
 
-      - name: Show built wheels (debug)
-        shell: bash
-        run: |
-          echo "=== workspace ==="
-          pwd
-          echo "=== listing python/wheelhouse ==="
-          ls -la python || true
-          ls -la python/wheelhouse || true
-          echo "=== recursive ==="
-          ls -R .
-
-      - name: Upload Python wheels (only the .whl files)
+      - name: Upload Python wheels
         uses: actions/upload-artifact@v4
         with:
-          name: python-wheels
-          # upload wheel files explicitly (works cross-platform)
-          path: python/wheelhouse/*.whl
+          name: python-wheels-${{ runner.os }}-${{ matrix.arch }}
+          path: python/wheelhouse
 
   test-python-wheels:
     needs: [build-python-wheels]
-    runs-on: windows-2022
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, windows-2022]
 
     steps:
       - name: Set up Python 3.10
@@ -71,36 +71,21 @@ jobs:
         shell: bash
         run: ./python/tools/prepare_test_environment.sh
 
-      - name: Download Python wheels artifact into python/wheelhouse
+      - name: Download Python wheels
         uses: actions/download-artifact@v4
         with:
-          pattern: python-wheels
+          pattern: python-wheels-${{ runner.os }}-*
           merge-multiple: true
-          path: python/wheelhouse
+          path: .
 
-      - name: Show downloaded wheels (debug)
-        shell: bash
-        run: |
-          echo "Contents of python/wheelhouse after download:"
-          pwd
-          ls -la python || true
-          ls -la python/wheelhouse || true
-          echo "All files:"
-          ls -R .
+      - name: Install wheel (Linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: pip install *cp310*manylinux*x86_64.whl
 
       - name: Install wheel (Windows)
+        if: startsWith(matrix.os, 'windows')
         shell: bash
-        run: |
-          # fail early if no wheels found
-          echo "Installing wheels in python/wheelhouse/"
-          WHEELS=(python/wheelhouse/*cp310*win*.whl)
-          if [ ! -e "${WHEELS[0]}" ]; then
-            echo "ERROR: no windows cp310 wheels found under python/wheelhouse/"
-            echo "Listing directory:"
-            ls -la python/wheelhouse || true
-            exit 1
-          fi
-          pip install python/wheelhouse/*cp310*win*.whl
+        run: pip install *cp310*win*.whl
 
       - name: Run tests
         shell: bash
@@ -140,13 +125,13 @@ jobs:
       - name: Download Python wheels
         uses: actions/download-artifact@v4
         with:
-          pattern: python-wheels
+          pattern: python-wheels-*
           merge-multiple: true
-          path: python/wheelhouse
+          path: .
 
       - name: Publish Python wheels to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
-          packages-dir: python/wheelhouse
+          packages-dir: .
