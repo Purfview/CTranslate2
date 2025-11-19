@@ -6,6 +6,9 @@
 #include "cpu/backend.h"
 #include "dispatch.h"
 
+#include <iostream>
+#include <sstream>
+
 namespace ctranslate2 {
   namespace layers {
 
@@ -338,6 +341,29 @@ namespace ctranslate2 {
 
     void Dense::operator()(const StorageView& input, StorageView& output) const {
       PROFILE("Dense");
+
+      // --- DEBUG: small helper to print shape reliably
+      auto shape_to_string = [](const StorageView &s) {
+        std::ostringstream oss;
+        oss << "(";
+        const auto &sh = s.shape();
+        for (size_t _i = 0; _i < sh.size(); ++_i) {
+          if (_i) oss << ",";
+          oss << sh[_i];
+        }
+        oss << ")";
+        return oss.str();
+      };
+
+      // --- DEBUG: always show Dense call info ---
+      std::cerr << "[Dense] quantized_gemm=" << _quantized_gemm
+                << " input_dtype=" << (/* use dtype_name if available */ (true ? dtype_name(input.dtype()) : std::to_string(static_cast<int>(input.dtype()))))
+                << " weight_dtype=" << (/* use dtype_name if available */ (true ? dtype_name((_partial_weight.empty() ? _weight.dtype() : _partial_weight.dtype())) : std::to_string(static_cast<int>((_partial_weight.empty() ? _weight.dtype() : _partial_weight.dtype())))))
+                << " input_size=" << input.size()
+                << " weight_size=" << (_partial_weight.empty() ? _weight.size() : _partial_weight.size())
+                << std::endl;
+      // ------------------------------------------------
+
       const StorageView* qscale = _partial_qscale.empty() ? _qscale : &_partial_qscale;
       const StorageView* weight = _partial_weight.empty() ? &_weight : &_partial_weight;
       const StorageView* bias = _partial_bias.empty() ? _bias : &_partial_bias;
@@ -387,6 +413,16 @@ namespace ctranslate2 {
           _quantize_op(input, qinput, qinput_scale);
         }
 
+        // --- DEBUG
+        std::cerr << "[Dense->GEMM] path=quantized-ct2"
+                  << " qinput.dtype=" << dtype_name(qinput.dtype())
+                  << " weight.dtype=" << dtype_name(weight->dtype())
+                  << " qinput.shape=" << shape_to_string(qinput)
+                  << " weight.shape=" << shape_to_string(*weight)
+                  << " compensation=" << (compensation ? "yes" : "no")
+                  << std::endl;
+        // --- DEBUG
+
         _gemm_op(qinput, *weight, qoutput, compensation);
         _dequantize_op(qoutput,
                        qinput_scale,
@@ -409,8 +445,27 @@ namespace ctranslate2 {
                                 /*a_is_packed=*/false,
                                 /*b_is_packed*/false,
                                 _activation_type);
+
+              // --- DEBUG
+              std::cerr << "[Dense->GEMM] path=AWQ_GEMM_large"
+                        << " input.dtype=" << dtype_name(input.dtype())
+                        << " weight_dequant.dtype=" << dtype_name(weight_dequant.dtype())
+                        << " input.shape=" << shape_to_string(input)
+                        << " weight_dequant.shape=" << shape_to_string(weight_dequant)
+                        << std::endl;
+              // --- DEBUG
+
               gemm_op(input, weight_dequant, output, nullptr, bias);
             } else {
+              // --- DEBUG
+              std::cerr << "[Dense->GEMM] path=AWQ_GEMM_small"
+                        << " input.dtype=" << dtype_name(input.dtype())
+                        << " weight.dtype=" << dtype_name(weight->dtype())
+                        << " input.shape=" << shape_to_string(input)
+                        << " weight.shape=" << shape_to_string(*weight)
+                        << std::endl;
+              // --- DEBUG
+
               ops::GemmAwq gemm_awq_op(/*alpha=*/1, /*beta=*/0, /*trans_a=*/false, /*trans_b=*/false,
                 /*a_is_packed=*/false, /*b_is_packed=*/false, _activation_type);
               gemm_awq_op(input, *weight, *qscale, *_qzero, output, bias);
@@ -420,6 +475,16 @@ namespace ctranslate2 {
           {
             ops::GemvAwq gemv_awq_op(/*alpha=*/1, /*beta=*/0, /*trans_a=*/false, /*trans_b=*/false,
               /*a_is_packed=*/false, /*b_is_packed=*/false, _activation_type);
+
+            // --- DEBUG
+            std::cerr << "[Dense->GEMM] path=AWQ_GEMV"
+                      << " input.dtype=" << dtype_name(input.dtype())
+                      << " weight.dtype=" << dtype_name(weight->dtype())
+                      << " input.shape=" << shape_to_string(input)
+                      << " weight.shape=" << shape_to_string(*weight)
+                      << std::endl;
+            // --- DEBUG
+
             gemv_awq_op(input, *weight, *qscale, *_qzero, output, bias);
             break;
           }
@@ -428,6 +493,16 @@ namespace ctranslate2 {
                                         "support only ct2 and awq quantization");
         }
       } else {
+
+        // --- DEBUG
+        std::cerr << "[Dense->GEMM] path=non_quantized"
+                  << " input.dtype=" << dtype_name(input.dtype())
+                  << " weight.dtype=" << dtype_name(weight->dtype())
+                  << " input.shape=" << shape_to_string(input)
+                  << " weight.shape=" << shape_to_string(*weight)
+                  << std::endl;
+        // --- DEBUG
+
         _gemm_op(input, *weight, output, nullptr, bias);
       }
     }
