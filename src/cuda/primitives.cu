@@ -555,17 +555,15 @@ namespace ctranslate2 {
     CUDA_CHECK(cudaGetDevice(&__ct2_cuda_dev));
 
     const cudaDeviceProp &__ct2_dev_prop = cuda::get_device_properties(__ct2_cuda_dev);
-    int __ct2_cublas_ver = 0;
-    cublasGetVersion(cuda::get_cublas_handle(), &__ct2_cublas_ver);
 
     std::cerr << "[CT2 CUDA GEMM int8] device=" << __ct2_cuda_dev
               << " name=\"" << __ct2_dev_prop.name << "\""
               << " cc=" << __ct2_dev_prop.major << "." << __ct2_dev_prop.minor
-              << " cublas_ver=" << __ct2_cublas_ver
               << " supports_int8=" << (cuda::gpu_supports_int8(__ct2_cuda_dev) ? "yes" : "no")
               << " has_int8_tcs=" << (cuda::gpu_has_int8_tensor_cores(__ct2_cuda_dev) ? "yes" : "no")
               << " has_fp16_tcs=" << (cuda::gpu_has_fp16_tensor_cores(__ct2_cuda_dev) ? "yes" : "no")
               << std::endl;
+
 
     std::cerr << "[CT2 CUDA GEMM int8] ptr_a=" << static_cast<const void*>(a)
               << " ptr_b=" << static_cast<const void*>(b)
