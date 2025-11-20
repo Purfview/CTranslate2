@@ -8,7 +8,7 @@
 #include "type_dispatch.h"
 
 #include <iostream>
-#include "ctranslate2/cuda/utils.h"  // for cuda::cublasGetStatusName(...)
+#include "cuda/utils.h"  // for cuda::cublasGetStatusName(...)
 
 namespace ctranslate2 {
 
