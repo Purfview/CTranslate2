@@ -7,9 +7,6 @@
 #include "cuda/helpers.h"
 #include "type_dispatch.h"
 
-#include <iostream>
-#include "cuda/utils.h"  // for cuda::cublasGetStatusName(...)
-
 namespace ctranslate2 {
 
   template<>
@@ -549,42 +546,7 @@ namespace ctranslate2 {
     int32_t beta_i = beta;
 
     // cuBLAS assumes column-major storage, so swap a and b accordingly.
-
-    // --- DEBUG: print device, cublas, and GEMM params (corrected) ---
-    int __ct2_cuda_dev = 0;
-    CUDA_CHECK(cudaGetDevice(&__ct2_cuda_dev));
-
-    const cudaDeviceProp &__ct2_dev_prop = cuda::get_device_properties(__ct2_cuda_dev);
-
-    std::cerr << "[CT2 CUDA GEMM int8] device=" << __ct2_cuda_dev
-              << " name=\"" << __ct2_dev_prop.name << "\""
-              << " cc=" << __ct2_dev_prop.major << "." << __ct2_dev_prop.minor
-              << " supports_int8=" << (cuda::gpu_supports_int8(__ct2_cuda_dev) ? "yes" : "no")
-              << " has_int8_tcs=" << (cuda::gpu_has_int8_tensor_cores(__ct2_cuda_dev) ? "yes" : "no")
-              << " has_fp16_tcs=" << (cuda::gpu_has_fp16_tensor_cores(__ct2_cuda_dev) ? "yes" : "no")
-              << std::endl;
-
-
-    std::cerr << "[CT2 CUDA GEMM int8] ptr_a=" << static_cast<const void*>(a)
-              << " ptr_b=" << static_cast<const void*>(b)
-              << " ptr_c=" << static_cast<void*>(c)
-              << " trans_a=" << transpose_a
-              << " trans_b=" << transpose_b
-              << " m=" << m << " n=" << n << " k=" << k
-              << " lda=" << lda << " ldb=" << ldb << " ldc=" << ldc
-              << std::endl;
-
-    // compute type (cublasComputeType_t) and algo (cublasGemmAlgo_t) for modern cublas
-    const cublasComputeType_t __ct2_compute_type = CUBLAS_COMPUTE_32I;                // FIX: CUBLAS_COMPUTE_32I (not CUDA_R_32I)
-    const cublasGemmAlgo_t __ct2_algo = CUBLAS_GEMM_DEFAULT_TENSOR_OP;                // correct enum type
-
-    std::cerr << "[CT2 CUDA GEMM int8] compute_type=" << static_cast<int>(__ct2_compute_type)
-              << " cublas_algo=" << static_cast<int>(__ct2_algo)
-              << " (compute=CUBLAS_COMPUTE_32I, algo=CUBLAS_GEMM_DEFAULT_TENSOR_OP)"
-              << std::endl;
-
-    // Call cublas and capture status
-    cublasStatus_t __ct2_cublas_status = cublasGemmEx(cuda::get_cublas_handle(),
+    CUBLAS_CHECK(cublasGemmEx(cuda::get_cublas_handle(),
                               transpose_b ? CUBLAS_OP_T : CUBLAS_OP_N,
                               transpose_a ? CUBLAS_OP_T : CUBLAS_OP_N,
                               n, m, k,
@@ -593,30 +555,8 @@ namespace ctranslate2 {
                               a, CUDA_R_8I, lda,
                               &beta_i,
                               c, CUDA_R_32I, ldc,
-                              __ct2_compute_type,   // FIX: CUBLAS_COMPUTE_32I (not CUDA_R_32I)
-                              __ct2_algo);
-
-    if (__ct2_cublas_status != CUBLAS_STATUS_SUCCESS) {
-      std::cerr << "[CT2 CUDA GEMM int8] cublasGemmEx failed: "
-                << cuda::cublasGetStatusName(__ct2_cublas_status)
-                << " device_id=" << __ct2_cuda_dev
-                << " cc=" << __ct2_dev_prop.major << "." << __ct2_dev_prop.minor
-                << " m=" << m << " n=" << n << " k=" << k
-                << " lda=" << lda << " ldb=" << ldb << " ldc=" << ldc
-                << " trans_a=" << transpose_a << " trans_b=" << transpose_b
-                << " compute_type=" << static_cast<int>(__ct2_compute_type)
-                << " cublas_algo=" << static_cast<int>(__ct2_algo)
-                << std::endl;
-    } else {
-      std::cerr << "[CT2 CUDA GEMM int8] cublasGemmEx OK"
-                << " m=" << m << " n=" << n << " k=" << k
-                << " lda=" << lda << " ldb=" << ldb << " ldc=" << ldc
-                << std::endl;
-    }
-    CUBLAS_CHECK(__ct2_cublas_status);
-    // ------------------------------------------------------
-
-
+                              CUDA_R_32I,
+                              CUBLAS_GEMM_DEFAULT_TENSOR_OP));
   }
 
   template<>
