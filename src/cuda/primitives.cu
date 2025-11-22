@@ -556,7 +556,7 @@ namespace ctranslate2 {
                               &beta_i,
                               c, CUDA_R_32I, ldc,
                               CUDA_R_32I,
-                              CUBLAS_GEMM_DEFAULT_TENSOR_OP));
+                              CUBLAS_GEMM_DEFAULT));
   }
 
   template<>
