@@ -20,48 +20,16 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Show disk and docker usage (before cleanup)
-        run: |
-          echo "=== df -h ==="
-          df -h
-          echo "=== top-level disk folders ==="
-          sudo du -hx --max-depth=1 / | sort -h
-          echo "=== docker system df ==="
-          docker system df || true
-
-      - name: Free disk space (cleanup heavy preinstalled directories + docker prune)
-        run: |
-          echo "Removing big preinstalled directories to free space (may remove preinstalled tools)..."
-          sudo rm -rf /opt/hostedtoolcache || true
-          sudo rm -rf /usr/share/dotnet || true
-          sudo rm -rf /usr/lib/jvm || true
-          sudo rm -rf /usr/local/lib/android || true
-          echo "Running docker prune..."
-          docker system prune -af --volumes || true
-          docker builder prune -af || true
-          echo "Disk after cleanup:"
-          df -h
-          docker system df || true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
 
       - name: Show disk and docker usage (before build)
         run: |
           df -h
-          docker system df || true
+
 
       - name: Build Docker images
         run: |
           ./docker/build_all.sh
 
-      - name: Show disk and docker usage (after build)
-        if: always()
-        run: |
-          echo "=== df -h (after build) ==="
-          df -h
-          echo "=== docker system df (after build) ==="
-          docker system df || true
 
       - name: Login to GHCR (for pushing images, only on tag pushes)
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
