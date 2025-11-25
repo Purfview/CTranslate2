@@ -52,10 +52,7 @@ jobs:
           docker system df || true
 
       - name: Build Docker images
-        env:
-          # forward any env your script needs
         run: |
-          # If you use buildx in ./docker/build_all.sh it will benefit from the setup above.
           ./docker/build_all.sh
 
       - name: Show disk and docker usage (after build)
