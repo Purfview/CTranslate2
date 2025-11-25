@@ -296,6 +296,21 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Show disk and docker usage (before build)
+        run: |
+          df -h
+          docker system df
+
+      - name: Build Docker images
+        run: |
+          ./docker/build_all.sh
+
+      - name: Show disk and docker usage (after build)
+        if: always()
+        run: |
+          df -h
+          docker system df
+
       - name: Build Docker images
         run: |
           ./docker/build_all.sh
