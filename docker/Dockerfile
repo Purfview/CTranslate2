@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 as builder
+FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04 AS builder
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
