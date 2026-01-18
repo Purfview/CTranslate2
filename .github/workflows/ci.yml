@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - _temptest
     tags:
       - v*
   pull_request:
