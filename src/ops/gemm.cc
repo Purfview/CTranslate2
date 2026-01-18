@@ -4,14 +4,6 @@
 
 #include "dispatch.h"
 
-#include <iostream>
-#include <sstream>
-#include <typeinfo>
-#include <thread>
-#ifdef __GNUG__
-# include <cxxabi.h>
-#endif
-
 namespace ctranslate2 {
   namespace ops {
 
@@ -94,48 +86,6 @@ namespace ctranslate2 {
         output_shape[output_shape.size() - 1] = n;
         c.resize(std::move(output_shape));
       }
-
-      // --- DEBUG: GEMM logging (improved) ---
-      // demangle helper (GNU) / fallback to raw name
-#ifdef __GNUG__
-      auto demangle = [](const char* name) -> std::string {
-        int status = 0;
-        char* dem = abi::__cxa_demangle(name, nullptr, nullptr, &status);
-        std::string s = (status == 0 && dem) ? dem : name;
-        free(dem);
-        return s;
-      };
-#else
-      auto demangle = [](const char* name) -> std::string { return std::string(name); };
-#endif
-
-      std::ostringstream __ct2_gemm_oss;
-      __ct2_gemm_oss << "[CT2 GEMM] thread=" << std::this_thread::get_id()
-                    << " device=" << int(D)
-                    << " In=" << demangle(typeid(In).name())
-                    << " Out=" << demangle(typeid(Out).name());
-
-      // runtime dtypes (use dtype_name if available)
-#ifdef HAVE_DTYPE_NAME
-      __ct2_gemm_oss << " a_dtype=" << dtype_name(a.dtype())
-                    << " b_dtype=" << dtype_name(b.dtype());
-#else
-      __ct2_gemm_oss << " a_dtype=" << static_cast<int>(a.dtype())
-                    << " b_dtype=" << static_cast<int>(b.dtype());
-#endif
-
-      __ct2_gemm_oss << " a_is_packed=" << _a_is_packed
-                    << " b_is_packed=" << _b_is_packed
-                    << " trans_a=" << _trans_a
-                    << " trans_b=" << _trans_b
-                    << " m=" << m << " n=" << n << " k=" << k
-                    << " lda=" << lda << " ldb=" << ldb << " ldc=" << ldc
-                    << " ptr_a=" << static_cast<const void*>(a.data<In>())
-                    << " ptr_b=" << static_cast<const void*>(b.data<In>())
-                    << " ptr_c=" << static_cast<void*>(c.data<Out>());
-
-      std::cerr << __ct2_gemm_oss.str() << std::endl;
-      // --------------------------------------------------
 
       primitives<D>::gemm(_a_is_packed, _b_is_packed,
                           _trans_a, _trans_b,
