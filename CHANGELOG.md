@@ -4,7 +4,34 @@
 
 ### Fixes and improvements
 
-## [v4.6.1](https://github.com/OpenNMT/CTranslate2/releases/tag/v4.6.1) (2025-10-07)
+## [v4.6.3](https://github.com/OpenNMT/CTranslate2/releases/tag/v4.6.3) (2026-01-XX)
+
+### New features
+
+* T5Gemma model conversion and inference (#1962) by [@jordimas](https://github.com/jordimas)
+* Support for CUDA 12.8 (#1937, #1940) by [@Purfview](https://github.com/Purfview)
+* Conv1d pure CUDA implementation (#1949), makes cuDNN an optional dependency by [@jordimas](https://github.com/jordimas)
+* Add CUDA implementation for median filter (#1917) by [@ja2d8a4v](https://github.com/a2d8a4v)
+
+### Fixes and improvements
+
+* Fix issue- tokens batch_type may exceed max_batch_size (#1948) by [@anterart](https://github.com/anterart)
+* Fixes AWQ support for Qwen 2.5/3 and Phi3 (#1951, #1952, #1953) by [@BBC-Esq](https://github.com/BBC-Esq)
+
+## [v4.6.2](https://github.com/OpenNMT/CTranslate2/releases/tag/v4.6.2) (2025-12-05)
+
+### New features
+
+* Qwen 3 support (#1943) by [@jordimas](https://github.com/jordimas)
+* Gemma 3 text support (#1936) by [@jordimas](https://github.com/jordimas)
+
+### Fixes and improvements
+
+* Fixed pkg_resources Deprecated Warning (#1911) by [@thawancomt](https://github.com/thawancomt)
+* Disable INT8 for sm120 - Blackwell GPUs (#1937) by [@Purfview](https://github.com/Purfview)
+* FIX: package libctranslate2.so in wheel to avoid build fail (#1920) by [@yzewei](https://github.com/yzewei)
+
+## [v4.6.1](https://github.com/OpenNMT/CTranslate2/releases/tag/v4.6.1) (2025-11-07)
 
 ### New features
 
@@ -16,7 +43,7 @@
 Note: The Ctranslate2 Python package now supports python 3.13, drop the support for python 3.8.
 
 ### New features
-* Pyhton 3.13 support (#1858)
+* Python 3.13 support (#1858)
 * Support returning hidden vector in Wav2Vec2 and Wav2Vec2Bert Models (#1867)
 * Add noexecstack linker flags (#1852 + #1861)
 * Support Qwen2 (#1820)

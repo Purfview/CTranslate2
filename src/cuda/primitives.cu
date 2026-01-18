@@ -142,6 +142,15 @@ namespace ctranslate2 {
 
   template<>
   template <typename T>
+  void primitives<Device::CUDA>::add_block_broadcast(const T* a, const T* b, T* c,
+                                                     dim_t block, dim_t a_size, dim_t b_size) {
+    cuda::binary_transform(a, b, c, b_size,
+                           cuda::plus<cuda::device_type<T>>(),
+                           cuda::repeat_vec_block<cuda::index_t>(block, a_size));
+  }
+
+  template<>
+  template <typename T>
   void primitives<Device::CUDA>::sub(const T* a, const T* b, T* c, dim_t size) {
     cuda::binary_transform(a, b, c, size, cuda::minus<cuda::device_type<T>>());
   }
@@ -503,7 +512,7 @@ namespace ctranslate2 {
                               beta_ptr,
                               c, CUDA_R_16F, ldc,
                               compute_type,
-                              CUBLAS_GEMM_DEFAULT_TENSOR_OP));
+                              CUBLAS_GEMM_DEFAULT));
   }
 
   template<>
@@ -528,7 +537,7 @@ namespace ctranslate2 {
                               &beta,
                               c, CUDA_R_16BF, ldc,
                               CUDA_R_32F,
-                              CUBLAS_GEMM_DEFAULT_TENSOR_OP));
+                              CUBLAS_GEMM_DEFAULT));
   }
 
   template<>
@@ -556,7 +565,7 @@ namespace ctranslate2 {
                               &beta_i,
                               c, CUDA_R_32I, ldc,
                               CUDA_R_32I,
-                              CUBLAS_GEMM_DEFAULT_TENSOR_OP));
+                              CUBLAS_GEMM_DEFAULT));
   }
 
   template<>
@@ -617,7 +626,7 @@ namespace ctranslate2 {
                                             c, CUDA_R_16F, ldc, stridec,
                                             batch_size,
                                             compute_type,
-                                            CUBLAS_GEMM_DEFAULT_TENSOR_OP));
+                                            CUBLAS_GEMM_DEFAULT));
   }
 
   template<>
@@ -642,7 +651,7 @@ namespace ctranslate2 {
                                             c, CUDA_R_16BF, ldc, stridec,
                                             batch_size,
                                             CUDA_R_32F,
-                                            CUBLAS_GEMM_DEFAULT_TENSOR_OP));
+                                            CUBLAS_GEMM_DEFAULT));
   }
 
   template <typename T>
@@ -743,6 +752,9 @@ namespace ctranslate2 {
   template void                                                         \
   primitives<Device::CUDA>::add_depth_broadcast(const T* a, const T* b, \
                                                 T* c, dim_t a_size, dim_t b_size); \
+  template void                                                         \
+  primitives<Device::CUDA>::add_block_broadcast(const T* a, const T* b, \
+                                                T* c, dim_t block, dim_t a_size, dim_t b_size); \
   template void                                                         \
   primitives<Device::CUDA>::sub(const T* a, const T* b, T* c, dim_t size); \
   template void                                                         \
