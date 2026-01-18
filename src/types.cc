@@ -8,6 +8,7 @@
 
 #include "cpu/backend.h"
 #include "env.h"
+#include <iostream>
 
 namespace ctranslate2 {
 
@@ -347,8 +348,15 @@ namespace ctranslate2 {
                                     const int device_index) {
 #ifdef CT2_WITH_CUDA
     if (device == Device::CUDA) {
+      std::cerr << "[debug] compute_type raw value = "
+                << static_cast<int>(compute_type)
+                << ", sizeof(ComputeType)=" << sizeof(ComputeType)
+                << std::endl;
       if ((compute_type == ComputeType::FLOAT16 || compute_type == ComputeType::BFLOAT16)
           && cuda::gpu_has_fp16_tensor_cores(device_index))
+        return 8;
+      else if ((compute_type == ComputeType::INT8_FLOAT16 || compute_type == ComputeType::INT8_BFLOAT16 || compute_type == ComputeType::INT8_FLOAT32)
+          && cuda::gpu_has_int8_tensor_cores(device_index))
         return 8;
     }
 #else
