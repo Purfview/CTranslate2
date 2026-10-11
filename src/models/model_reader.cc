@@ -2,6 +2,8 @@
 
 #include "ctranslate2/filesystem.h"
 
+#include <cstdio>
+
 namespace ctranslate2 {
   namespace models {
 
@@ -39,6 +41,39 @@ namespace ctranslate2 {
       membuf(const char* base, size_t size) {
         char* p = const_cast<char*>(base);
         setg(p, p, p + size);
+      }
+
+      std::streampos seekoff(std::streamoff off,
+                             std::ios_base::seekdir dir,
+                             std::ios_base::openmode which) override {
+        if (!(which & std::ios_base::in))
+          return std::streampos(-1);
+
+        char* begin = eback();
+        char* end = egptr();
+        std::streamoff base = 0;
+
+        if (dir == std::ios_base::beg)
+          base = 0;
+        else if (dir == std::ios_base::cur)
+          base = gptr() - begin;
+        else if (dir == std::ios_base::end)
+          base = end - begin;
+        else
+          return std::streampos(-1);
+
+        const std::streamoff next = base + off;
+        if (next < 0 || next > end - begin)
+          return std::streampos(-1);
+
+        setg(begin, begin + next, end);
+        return std::streampos(next);
+      }
+
+      std::streampos seekpos(std::streampos pos,
+                             std::ios_base::openmode which) override {
+        return seekoff(static_cast<std::streamoff>(pos),
+                       std::ios_base::beg, which);
       }
     };
 
